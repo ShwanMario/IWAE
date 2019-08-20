@@ -1,6 +1,6 @@
 # Importance Weighted Auto-Encoders Pytorch
 
-This Code to reproduce the experiments in the Importance Weighted Auto-Encoders(IWAE) paper(2016) by Yuri Burda, Roger Grosse, and Ruslan Salakhutdinov.The implementation was tested on the MNIST dataset to replicate the result in the above paper. You can train and test VAE and IWAE with 1 or 2 stochastic layers in different configurations of K and M in this repo. 
+Use this code to reproduce the experiments in the Importance Weighted Auto-Encoders(IWAE) paper(2016) by Yuri Burda, Roger Grosse, and Ruslan Salakhutdinov. The implementation was tested on the MNIST dataset to replicate the result in the above paper. You can train and test VAE and IWAE with 1 or 2 stochastic layers in different configurations of K and M in this repo. 
 
 # Prerequisites for running the code
 ## Dataset
