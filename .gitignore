@@ -53,8 +53,9 @@ CATKIN_IGNORE
 # Model and data files
 
 *.model
-/MNIST/output/model/*.model
+MNIST/output/model/*.model
 
 # pkl
 *.pkl
 IWAE/
+*.txt
