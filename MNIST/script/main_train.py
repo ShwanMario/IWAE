@@ -37,12 +37,27 @@ parser.add_argument("--latent_variable_2",type=int,
 parser.add_argument("--latent_variable_1",type=int,
                     default=100,
                     help="""number of neurons in latent variable h1""")
+parser.add_argument("--hidden_layer_1",type=int,
+                    default=200,
+                    help="""number of neurons in hidden layer 1""")
+parser.add_argument("--hidden_layer_2",type=int,
+                    default=100,
+                    help="""number of neurons in hidden layer 2""")
 parser.add_argument("--num_epoches",type=int,
                     default=5000,
                     help="""number of epoches""")
 parser.add_argument("--batch_size",type=int,
                     default=1000,
                     help="""batch size during the training process""")
+parser.add_argument("--p_x",type=str,
+                    default="discrete",
+                    help="""datatype of x""")
+parser.add_argument("--device",type=str,
+                    default="gpu",
+                    help="""cpu or gpu""")
+parser.add_argument("--learning_rate",type=float,
+                    default=0.0001,
+                    help="""learning rate""")
 args = parser.parse_args()
 
 num_samples=args.num_m*args.num_k
@@ -65,14 +80,15 @@ test_data = MNIST_Dataset(test_image)
 test_data_loader = DataLoader(test_data, batch_size = batch_size)
 
 if args.num_stochastic_layers == 1:
-    vae = IWAE_1(args.latent_variable_2, args.size_input)
+    vae = IWAE_1(args.latent_variable_2, args.size_input,p_x=args.p_x,hidden_layer=args.hidden_layer_1)
 elif args.num_stochastic_layers == 2:
-    vae = IWAE_2(args.latent_variable_1, args.latent_variable_2, args.size_input)
+    vae = IWAE_2(args.latent_variable_1, args.latent_variable_2, args.size_input,p_x=args.p_x,hidden_layer_1=args.hidden_layer_1,hidden_layer_2=args.hidden_layer_2)
     
 vae.double() #cast all the floating point parameters and buffers to double datatype
-vae.cuda()
+if args.device=='gpu':
+    vae.cuda()
 
-optimizer = optim.Adam(vae.parameters())
+optimizer = optim.Adam(vae.parameters(),lr=args.learning_rate)
 num_epoches = args.num_epoches
 train_loss_epoch = []
 for epoch in range(num_epoches):
@@ -86,9 +102,9 @@ for epoch in range(num_epoches):
             inputs = inputs.repeat(num_samples, 1)
             inputs = inputs.expand(1, batch_size*num_samples, args.size_input)################
         optimizer.zero_grad()
-        loss = vae.train_loss(inputs,args.num_m,args.num_k)
+        loss= vae.train_loss(inputs,args.num_m,args.num_k)
         loss.backward()
-        optimizer.step()    
+        optimizer.step()
         print(("Epoch: {:>4}, Step: {:>4}, loss: {:>4.2f}")
               .format(epoch, idx, loss.item()), flush = True)
         running_loss.append(loss.item())

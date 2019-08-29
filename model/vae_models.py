@@ -10,7 +10,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
+class BernoulliLogProb(nn.Module):
+  def __init__(self):
+    super().__init__()
+    self.bce_with_logits = nn.BCEWithLogitsLoss(reduction='none')
 
+  def forward(self, logits, target):
+    # bernoulli log prob is equivalent to negative binary cross entropy
+    return -self.bce_with_logits(logits, target)
 class MNIST_Dataset(Dataset):    
     def __init__(self, image):
         super(MNIST_Dataset).__init__()
@@ -50,7 +57,7 @@ class BasicBlock(nn.Module):
         return mu, sigma
     
 class IWAE_1(nn.Module):
-    def __init__(self, dim_h1, dim_image_vars,hidden_layer=200):
+    def __init__(self, dim_h1, dim_image_vars,hidden_layer=200,p_x='discrete'):
         super(IWAE_1, self).__init__()
         self.dim_h1 = dim_h1
         self.dim_image_vars = dim_image_vars
@@ -59,12 +66,15 @@ class IWAE_1(nn.Module):
         self.encoder_h1 = BasicBlock(dim_image_vars, hidden_layer, dim_h1)
 
         ## decoder
+        if p_x=='discrete':
+            self.p_x=BernoulliLogProb()
+        #elif p_x=='continuous':
         self.decoder_x =  nn.Sequential(nn.Linear(dim_h1, hidden_layer),
                                         nn.Tanh(),
                                         nn.Linear(hidden_layer, hidden_layer),
                                         nn.Tanh(),
-                                        nn.Linear(hidden_layer, dim_image_vars),
-                                        nn.Sigmoid())
+                                        nn.Linear(hidden_layer, dim_image_vars))
+                                        #nn.Sigmoid())
         
     def encoder(self, x):
         mu_h1, sigma_h1 = self.encoder_h1(x)
@@ -81,40 +91,102 @@ class IWAE_1(nn.Module):
         p = self.decoder(h1)
         return (h1, mu_h1, sigma_h1, eps), (p)
 
-    def train_loss(self, inputs):
+    def train_loss(self, inputs,m,k):
         h1, mu_h1, sigma_h1, eps = self.encoder(inputs)
         #log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
         log_Qh1Gx = torch.sum(-0.5*(eps)**2 - torch.log(sigma_h1), -1)
         
         p = self.decoder(h1)
         log_Ph1 = torch.sum(-0.5*h1**2, -1)
-        log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        log_PxGh1 =torch.sum(self.p_x(p,inputs),-1)
 
         log_weight = log_Ph1 + log_PxGh1 - log_Qh1Gx #log_weight: n x 1 tensor
-        log_weight = log_weight - torch.max(log_weight, 0)[0] ### doesn't matter minus a constant
-        weight = torch.exp(log_weight)
-        weight = weight / torch.sum(weight, 0)
-        weight = Variable(weight.data, requires_grad = False)
-        loss = -torch.mean(torch.sum(weight * (log_Ph1 + log_PxGh1 - log_Qh1Gx), 0))
+        #log_weight = log_weight - torch.max(log_weight, 0)[0] ### doesn't matter minus a constant
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
+            weight = torch.exp(log_weight)
+            weight_ = weight.new_zeros(weight.size())
+            weight_ = weight / torch.sum(weight, 0)
+            weight_ = Variable(weight_.data, requires_grad=False)
+            '''
+        else:
+            weight = torch.exp(log_weight)
+            loss_k = weight.new_zeros([m,weight.shape[1]])
+            for i in range(m):
+                '''
+                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
+                weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
         return loss
 
-    def test_loss(self, inputs):
+    def test_loss(self, inputs,m,k):
         h1, mu_h1, sigma_h1, eps = self.encoder(inputs)
         #log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
         log_Qh1Gx = torch.sum(-0.5*(eps)**2 - torch.log(sigma_h1), -1)
         
         p = self.decoder(h1)
         log_Ph1 = torch.sum(-0.5*h1**2, -1)
-        log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        log_PxGh1 =torch.sum(self.p_x(p,inputs),-1)
 
         log_weight = log_Ph1 + log_PxGh1 - log_Qh1Gx
-        weight = torch.exp(log_weight)
-        loss = -torch.mean(torch.log(torch.mean(weight, 0)))        
+        #log_weight = log_weight - torch.max(log_weight, 0)[0]
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
+            weight = torch.exp(log_weight)
+            weight_ = weight.new_zeros(weight.size())
+            weight_ = weight / torch.sum(weight, 0)
+            weight_ = Variable(weight_.data, requires_grad=False)
+            '''
+        else:
+            weight = torch.exp(log_weight)
+            loss_k = weight.new_zeros([m,weight.shape[1]])
+            for i in range(m):
+                '''
+                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
+                weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
+        return loss
+
+    def test_loss_k(self, inputs, m=1, k=5000):
+        h1, mu_h1, sigma_h1, eps = self.encoder(inputs)
+        # log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        log_Qh1Gx = torch.sum(-0.5 * (eps) ** 2 - torch.log(sigma_h1), -1)
+
+        p = self.decoder(h1)
+        log_Ph1 = torch.sum(-0.5 * h1 ** 2, -1)
+        log_PxGh1 = torch.sum(self.p_x(p, inputs), -1)
+
+        log_weight = log_Ph1 + log_PxGh1 - log_Qh1Gx
+        #log_weight = log_weight - torch.max(log_weight, 0)[0]
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
+            weight = torch.exp(log_weight)
+            weight_ = weight.new_zeros(weight.size())
+            weight_ = weight / torch.sum(weight, 0)
+            weight_ = Variable(weight_.data, requires_grad=False)
+            '''
+        else:
+            weight = torch.exp(log_weight)
+            loss_k = weight.new_zeros([m,weight.shape[1]])
+            for i in range(m):
+                '''
+                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
+                weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
         return loss
 
     
 class IWAE_2(nn.Module):
-    def __init__(self, dim_h1, dim_h2, dim_image_vars,hidden_layer_1=200,hidden_layer_2=100):
+    def __init__(self, dim_h1, dim_h2, dim_image_vars,hidden_layer_1=200,hidden_layer_2=100,p_x='discrete'):
         super(IWAE_2, self).__init__()
 
         self.dim_h1 = dim_h1
@@ -126,14 +198,17 @@ class IWAE_2(nn.Module):
         self.encoder_h2 = BasicBlock(dim_h1, hidden_layer_2, dim_h2)
         
         ## decoder
+        if p_x=='discrete':
+            self.p_x=BernoulliLogProb()
+        #elif p_x=='continuous':
         self.decoder_h1 = BasicBlock(dim_h2, hidden_layer_2, dim_h1)
         self.decoder_x =  nn.Sequential(nn.Linear(dim_h1, hidden_layer_1),
                                         nn.Tanh(),
                                         nn.Linear(hidden_layer_1, hidden_layer_1),
                                         nn.Tanh(),
-                                        nn.Linear(hidden_layer_1, dim_image_vars),
-                                        nn.Sigmoid())
-        
+                                        nn.Linear(hidden_layer_1, dim_image_vars))
+                                        #nn.Sigmoid())
+
     def encoder(self, x):
         mu_h1, sigma_h1 = self.encoder_h1(x)
         eps1 = Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
@@ -142,17 +217,17 @@ class IWAE_2(nn.Module):
         mu_h2, sigma_h2 = self.encoder_h2(h1)
         eps2 = Variable(sigma_h2.data.new(sigma_h2.size()).normal_())
         h2 = mu_h2 + sigma_h2 * eps2
-        
+
         return (h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2)
-    
+
     def decoder(self,h1, h2):
         mu_h1, sigma_h1 = self.decoder_h1(h2)
-        eps_h1_=Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
-        h1_=mu_h1+sigma_h1*eps_h1_
-        #h1_=h1
+        #eps_h1_=Variable(sigma_h1.data.new(sigma_h1.size()).normal_())
+        #h1_=mu_h1+sigma_h1*eps_h1_
+        h1_=h1
         p = self.decoder_x(h1_)
         return (h1_, mu_h1, sigma_h1), (p)
-    
+
     def forward(self, x):
         (h1, mu_h1, sigma_h1,eps1), (h2, mu_h2, sigma_h2,eps2) = self.encoder(x)
         p = self.decoder(h1,h2)        #############################################################h1 & h1?
@@ -165,27 +240,33 @@ class IWAE_2(nn.Module):
 
         log_Qh1Gx = torch.sum(-0.5*(eps1)**2 - 0.5*torch.log(2*np.pi*(sigma_h1)**2), -1)
         log_Qh2Gh1 = torch.sum(-0.5*(eps2)**2 - 0.5*torch.log(2*np.pi*(sigma_h2)**2), -1)
-        
-        
+
+
         (h1_, mu_h1, sigma_h1), (p) = self.decoder(h1,h2)
         log_Ph2 = torch.sum(-0.5*h2**2-0.5*torch.log(torch.tensor(2*np.pi,dtype=torch.double)), -1)
         log_Ph1Gh2 = torch.sum(-0.5*((h1_-mu_h1)/sigma_h1)**2 - 0.5*torch.log(2*np.pi*(sigma_h1)**2), -1)
-        log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
-
+        #log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        log_PxGh1 =torch.sum(self.p_x(p,inputs),-1)
         log_weight = log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1
-        log_weight = log_weight - torch.max(log_weight, 0)[0]
-        if log_weight.shape[0] == 1:
+        #log_weight = log_weight - torch.max(log_weight, 0)[0]
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
             weight = torch.exp(log_weight)
             weight_ = weight.new_zeros(weight.size())
             weight_ = weight / torch.sum(weight, 0)
             weight_ = Variable(weight_.data, requires_grad=False)
+            '''
         else:
             weight = torch.exp(log_weight)
-            weight_=weight.new_zeros(weight.size())
+            loss_k = weight.new_zeros([m,weight.shape[1]])
             for i in range(m):
-                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] /( torch.sum(weight[i * k:(i + 1) * k], 0)+0.0001)
+                '''
+                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
                 weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
-        loss = -torch.mean(torch.sum(weight_/m * (log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1), 0))
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
         return loss
 
     def test_loss(self, inputs,m,k):
@@ -198,21 +279,64 @@ class IWAE_2(nn.Module):
         (h1_, mu_h1, sigma_h1), (p) = self.decoder(h1,h2)
         log_Ph2 = torch.sum(-0.5*h2**2-0.5*torch.log(torch.tensor(2*np.pi,dtype=torch.double)), -1)
         log_Ph1Gh2 = torch.sum(-0.5*((h1_-mu_h1)/sigma_h1)**2 - 0.5*torch.log(2*np.pi*(sigma_h1)**2), -1)
-        log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        #log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        log_PxGh1 = torch.sum(self.p_x(p, inputs), -1)
         log_weight = log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1
-        log_weight = log_weight - torch.max(log_weight, 0)[0]
-        if log_weight.shape[0] == 1:
+        #log_weight = log_weight - torch.max(log_weight, 0)[0]
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
             weight = torch.exp(log_weight)
             weight_ = weight.new_zeros(weight.size())
             weight_ = weight / torch.sum(weight, 0)
             weight_ = Variable(weight_.data, requires_grad=False)
+            '''
         else:
             weight = torch.exp(log_weight)
-            weight_=weight.new_zeros(weight.size())
+            loss_k = weight.new_zeros([m,weight.shape[1]])
             for i in range(m):
+                '''
                 weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
                 weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
-        loss = -torch.mean(torch.sum(weight_/m * (log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1), 0))
-        
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
+        return loss
+
+    def test_loss_k(self, inputs, m=1, k=5000):
+        (h1, mu_h1, sigma_h1, eps1), (h2, mu_h2, sigma_h2, eps2) = self.encoder(inputs)
+        # log_Qh1Gx = torch.sum(-0.5*((h1-mu_h1)/sigma_h1)**2 - torch.log(sigma_h1), -1)
+        # log_Qh2Gh1 = torch.sum(-0.5*((h2-mu_h2)/sigma_h2)**2 - torch.log(sigma_h2), -1)
+        log_Qh1Gx = torch.sum(-0.5 * (eps1) ** 2 - 0.5 * torch.log(2 * np.pi * (sigma_h1) ** 2), -1)
+        log_Qh2Gh1 = torch.sum(-0.5 * (eps2) ** 2 - 0.5 * torch.log(2 * np.pi * (sigma_h2) ** 2), -1)
+
+        (h1_, mu_h1, sigma_h1), (p) = self.decoder(h1, h2)
+        log_Ph2 = torch.sum(-0.5 * h2 ** 2 - 0.5 * torch.log(torch.tensor(2 * np.pi, dtype=torch.double)), -1)
+        log_Ph1Gh2 = torch.sum(-0.5 * ((h1_ - mu_h1) / sigma_h1) ** 2 - 0.5 * torch.log(2 * np.pi * (sigma_h1) ** 2),
+                               -1)
+        # log_PxGh1 = torch.sum(inputs*torch.log(p) + (1-inputs)*torch.log(1-p), -1)
+        log_PxGh1 = torch.sum(self.p_x(p, inputs), -1)
+        log_weight = log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1
+        #log_weight = log_weight - torch.max(log_weight, 0)[0]
+        if k == 1:
+            loss=-torch.mean(log_weight)
+            '''
+            weight = torch.exp(log_weight)
+            weight_ = weight.new_zeros(weight.size())
+            weight_ = weight / torch.sum(weight, 0)
+            weight_ = Variable(weight_.data, requires_grad=False)
+            '''
+        else:
+            weight = torch.exp(log_weight)
+            loss_k = weight.new_zeros([m,weight.shape[1]])
+            for i in range(m):
+                '''
+                weight_[i * k:(i + 1) * k] = weight[i * k:(i + 1) * k] / torch.sum(weight[i * k:(i + 1) * k], 0)
+                weight_[i * k:(i + 1) * k] = Variable(weight_[i * k:(i + 1) * k].data, requires_grad=False)
+                '''
+                loss_k[i]=torch.mean(weight[i * k:(i + 1) * k],0)
+            loss=-torch.mean(torch.log(loss_k))
+
+        #loss = -torch.mean(torch.sum(weight_ / m * (log_Ph2 + log_Ph1Gh2 + log_PxGh1 - log_Qh1Gx - log_Qh2Gh1), 0))
         return loss
     
