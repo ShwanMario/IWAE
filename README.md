@@ -15,19 +15,23 @@ pytorch==1.1.0 numpy==1.14.2
 This code allows you to train, evaluate and compare VAE and IWAE architectures on the mnist dataset. To train and test the model, run the following commands.
 ## Trainning Original VAE
 ```
-python main_train.py  --model VAE --num_stochastic_layers 1 --num_m 5 --num_k 1
+python main_train.py  --model VAE --num_stochastic_layers 1 --num_m 1 --num_k 1
 ```
 ## Training IWAE with 2 stochastic layers
 ```
-python main_train.py  --model IWAE --num_stochastic_layers 2 --num_m 5 --num_k 5
+python main_train.py  --model IWAE --num_stochastic_layers 2 --num_m 1 --num_k 5
 ```
 ## Testing Original VAE
 ```
-python main_train.py  --model VAE --num_stochastic_layers 1 --num_m 5 --num_k 1 --epoch 4999
+python main_test.py  --model VAE --num_stochastic_layers 1 --num_m 1 --num_k 1 --epoch 4999
 ```
 ## Testing IWAE with 2 stochastic layers
 ```
-python main_train.py  --modelIWAE --num_stochastic_layers 2 --num_m 5 --num_k 1 --epoch 4999
+python main_test.py  --modelIWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --epoch 4999
+```
+## Testing IWAE with 2 stochastic layers on log likelihood 
+```
+python main_test_k.py  --modelIWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --num_k_test 5000 --epoch 4999
 ```
 See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_train.py) and [the test file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_test.py) for more options.
 
