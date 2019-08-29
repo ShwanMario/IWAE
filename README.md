@@ -42,7 +42,7 @@ See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importanc
 | -----------------| --------------- | --------------- | --------|
 |VAE or IWAE<sub>(M=K=1)</sub>| 86.28| 86.76| -|
 |MIWAE<sub>(1,64)</sub>| | |84.52|
-|MIWAE<sub>(4,16)</sub>| | |84.56 |
+|MIWAE<sub>(4,16)</sub>|83.81 | |84.56 |
 |MIWAE<sub>(8,8)</sub>| | |84.97 |
 |MIWAE<sub>(16,4)</sub>| | | -|
 |MIWAE<sub>(64,1)</sub>| |  |86.21|
@@ -51,7 +51,7 @@ See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importanc
 | -----------------| ---------------| --------|
 |VAE or IWAE<sub>M=K=1</sub>| 90.32| - |
 |MIWAE<sub>(1,64)</sub>| |86.11|
-|MIWAE<sub>(4,16)</sub>| |85.60 |
+|MIWAE<sub>(4,16)</sub>|84.92 |85.60 |
 |MIWAE<sub>(8,8)</sub>| | 85.69 |
 |MIWAE<sub>(16,4)</sub>| |  -|
 |MIWAE<sub>(64,1)</sub>| |  86.69|
