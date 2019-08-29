@@ -32,15 +32,6 @@ python main_train.py  --modelIWAE --num_stochastic_layers 2 --num_m 5 --num_k 1 
 See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_train.py) and [the test file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_test.py) for more options.
 
 ###Experiment results of this repo on binarized MNIST dataset
-|   Method   | IWAE<sub>MK</sub> loss (This repo) | IWAE<sub>MK</sub> loss ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
-| -----------------| ---------------| --------|
-|VAE or IWAE<sub>M=K=1</sub>| 90.32| - |
-|IWAE<sub>(1,64)</sub>| |86.11|
-|IWAE<sub>(4,16)</sub>| |85.60 |
-|IWAE<sub>(8,8)</sub>| | 85.69 |
-|IWAE<sub>(16,4)</sub>| |  -|
-|IWAE<sub>(64,1)</sub>| |  86.69|
-
 
 
 |   Method   | NLL (This repo) | NLL ([IWAE paper](https://arxiv.org/abs/1509.00519)) | NLL ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
@@ -52,4 +43,11 @@ See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importanc
 |IWAE<sub>(16,4)</sub>| | | -|
 |IWAE<sub>(64,1)</sub>| |  |86.21|
 
-
+|   Method   | IWAE<sub>MK</sub> loss (This repo) | IWAE<sub>MK</sub> loss ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
+| -----------------| ---------------| --------|
+|VAE or IWAE<sub>M=K=1</sub>| 90.32| - |
+|IWAE<sub>(1,64)</sub>| |86.11|
+|IWAE<sub>(4,16)</sub>| |85.60 |
+|IWAE<sub>(8,8)</sub>| | 85.69 |
+|IWAE<sub>(16,4)</sub>| |  -|
+|IWAE<sub>(64,1)</sub>| |  86.69|
