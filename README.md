@@ -35,7 +35,7 @@ python main_test_k.py  --modelIWAE --num_stochastic_layers 2 --num_m 1 --num_k 5
 ```
 See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_train.py) and [the test file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_test.py) for more options.
 
-###Experiment results of this repo on binarized MNIST dataset
+### Experiment results of this repo on binarized MNIST dataset
 
 
 |   Method   | NLL (This repo) | NLL ([IWAE paper](https://arxiv.org/abs/1509.00519)) | NLL ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
