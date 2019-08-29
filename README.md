@@ -27,11 +27,11 @@ python main_test.py  --model VAE --num_stochastic_layers 1 --num_m 1 --num_k 1 -
 ```
 ## Testing IWAE with 2 stochastic layers
 ```
-python main_test.py  --modelIWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --epoch 4999
+python main_test.py  --model IWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --epoch 4999
 ```
 ## Testing IWAE with 2 stochastic layers on log likelihood 
 ```
-python main_test_k.py  --modelIWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --num_k_test 5000 --epoch 4999
+python main_test_k.py  --model IWAE --num_stochastic_layers 2 --num_m 1 --num_k 5 --num_k_test 5000 --epoch 4999
 ```
 See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_train.py) and [the test file](https://github.com/ShwanMario/IWAE/blob/master/Importance_Weighted_Autoencoders-master/MNIST/script/main_test.py) for more options.
 
