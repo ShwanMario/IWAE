@@ -41,8 +41,8 @@ parser.add_argument("--p_x", type=str,
                     default="discrete",
                     help="""datatype of x""")
 parser.add_argument("--device", type=str,
-                    default="gpu",
-                    help="""cpu or gpu""")
+                    default="cuda",
+                    help="""cpu or cuda""")
 parser.add_argument("--num_m", type = int,
                     required = True,
                     help = """num of samples used in Monte Carlo estimate of ELBO""")
@@ -73,7 +73,7 @@ elif args.num_stochastic_layers == 2:
     vae = IWAE_2(args.latent_variable_1, args.latent_variable_2, args.size_input, p_x=args.p_x)
 
 vae.double()
-if args.device == 'gpu':
+if args.device == 'cuda':
     vae.cuda()
 model_file_name = ("../output/model/"
                    "{}_layers_{}_m_{}_k_{}_epoch_{}.model").format(

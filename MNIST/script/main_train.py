@@ -53,11 +53,14 @@ parser.add_argument("--p_x",type=str,
                     default="discrete",
                     help="""datatype of x""")
 parser.add_argument("--device",type=str,
-                    default="gpu",
-                    help="""cpu or gpu""")
+                    default="cuda",
+                    help="""cpu or cuda""")
 parser.add_argument("--learning_rate",type=float,
-                    default=0.0001,
+                    default=0.001,
                     help="""learning rate""")
+parser.add_argument("--epoch",type=int,
+                    default=0,
+                    help="""which epoch weights to use""")
 args = parser.parse_args()
 
 num_samples=args.num_m*args.num_k
@@ -85,8 +88,17 @@ elif args.num_stochastic_layers == 2:
     vae = IWAE_2(args.latent_variable_1, args.latent_variable_2, args.size_input,p_x=args.p_x,hidden_layer_1=args.hidden_layer_1,hidden_layer_2=args.hidden_layer_2)
     
 vae.double() #cast all the floating point parameters and buffers to double datatype
-if args.device=='gpu':
+if args.device=='cuda':
     vae.cuda()
+
+if args.epoch!=0:
+    model_file_name = ("../output/model/"
+                       "{}_layers_{}_m_{}_k_{}_epoch_{}.model").format(
+        args.model, args.num_stochastic_layers,
+        args.num_m, args.num_k, args.epoch)
+    vae.load_state_dict(torch.load(model_file_name))
+
+
 
 optimizer = optim.Adam(vae.parameters(),lr=args.learning_rate)
 num_epoches = args.num_epoches
@@ -106,7 +118,7 @@ for epoch in range(num_epoches):
         loss.backward()
         optimizer.step()
         print(("Epoch: {:>4}, Step: {:>4}, loss: {:>4.2f}")
-              .format(epoch, idx, loss.item()), flush = True)
+              .format(args.epoch+epoch, idx, loss.item()), flush = True)
         running_loss.append(loss.item())
 
 
@@ -116,5 +128,5 @@ for epoch in range(num_epoches):
         torch.save(vae.state_dict(),
                    ("../output/model/{}_layers_{}_m_{}_k_{}_epoch_{}.model")
                    .format(args.model, args.num_stochastic_layers,
-                           args.num_m,args.num_k, epoch))
+                           args.num_m,args.num_k, args.epoch+epoch))
 
