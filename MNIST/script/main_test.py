@@ -86,7 +86,7 @@ for idx, data in enumerate(test_data_loader):
     print(idx)
     data = data.double()
     with torch.no_grad():
-        inputs = Variable(data).cuda()
+        inputs = Variable(data).to(args.device)
         if args.model == "IWAE":
             inputs = inputs.expand(num_samples, batch_size, args.size_input)
         elif args.model=='VAE':

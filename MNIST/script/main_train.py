@@ -95,7 +95,7 @@ for epoch in range(num_epoches):
     running_loss = []    
     for idx, data in enumerate(train_data_loader):
         data = data.double()
-        inputs = Variable(data).cuda()
+        inputs = Variable(data).to(args.device)
         if args.model == "IWAE":
             inputs = inputs.expand(num_samples, batch_size, args.size_input)##################
         elif args.model == "VAE":
