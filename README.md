@@ -41,17 +41,17 @@ See [the training file](https://github.com/ShwanMario/IWAE/blob/master/Importanc
 |   Method   | NLL (This repo) | NLL ([IWAE paper](https://arxiv.org/abs/1509.00519)) | NLL ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
 | -----------------| --------------- | --------------- | --------|
 |VAE or IWAE<sub>(M=K=1)</sub>| 86.28| 86.76| -|
-|MIWAE<sub>(1,64)</sub>| | |84.52|
-|MIWAE<sub>(4,16)</sub>|83.81 | |84.56 |
-|MIWAE<sub>(8,8)</sub>| | |84.97 |
-|MIWAE<sub>(16,4)</sub>| | | -|
-|MIWAE<sub>(64,1)</sub>| |  |86.21|
+|MIWAE<sub>(1,64)</sub>| 84.62|- |84.52|
+|MIWAE<sub>(4,16)</sub>|83.81 | -|84.56 |
+|MIWAE<sub>(8,8)</sub>| 84.77| -|84.97 |
+|MIWAE<sub>(16,4)</sub>|85.01 | -| -|
+|MIWAE<sub>(64,1)</sub>|87.15 |  -|86.21|
 
 |   Method   | IWAE<sub>MK</sub> loss (This repo) | IWAE<sub>MK</sub> loss ([MIWAE paper](https://arxiv.org/abs/1802.04537))|
 | -----------------| ---------------| --------|
 |VAE or IWAE<sub>M=K=1</sub>| 90.32| - |
-|MIWAE<sub>(1,64)</sub>| |86.11|
+|MIWAE<sub>(1,64)</sub>|86.21 |86.11|
 |MIWAE<sub>(4,16)</sub>|84.92 |85.60 |
-|MIWAE<sub>(8,8)</sub>| | 85.69 |
-|MIWAE<sub>(16,4)</sub>| |  -|
-|MIWAE<sub>(64,1)</sub>| |  86.69|
+|MIWAE<sub>(8,8)</sub>|85.82 | 85.69 |
+|MIWAE<sub>(16,4)</sub>| 86.12|  -|
+|MIWAE<sub>(64,1)</sub>|87.81 |  86.69|
